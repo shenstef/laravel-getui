@@ -1,5 +1,5 @@
 {
-    "name": "shaozeming/laravel-getui",
+    "name": "shenstef/shaozeming-getui",
     "description": "一个适用于laravel和lumen框架的个推push推送服务包",
     "type": "library",
     "require": {
