@@ -9,7 +9,7 @@
 class IGtAPNPayload
 {
     var $APN_SOUND_SILENCE = "com.gexin.ios.silence";
-    public static $PAYLOAD_MAX_BYTES = 2048;
+    public static $PAYLOAD_MAX_BYTES = 3072;
 
 
     var $customMsg = array();
@@ -20,6 +20,16 @@ class IGtAPNPayload
     var $category;
     var $alertMsg;
     var $multiMedias = array();
+    //语音播报支持
+    var $voicePlayType = 0;
+    var $voicePlayMessage;
+    //新增字段，跟java同步
+    var $apnsCollapseId;
+    var $autoBadge;
+    //ios12新增
+    var $threadId;
+    var $sound_d;
+
 
     public function get_payload()
     {
@@ -34,8 +44,9 @@ class IGtAPNPayload
                     $apsMap["alert"] = $msg;
                 }
             }
-
-            if ($this->badge >= 0) {
+            if($this->autoBadge != null){
+                $apsMap["autoBadge"] = $this->autoBadge;
+            }elseif($this->badge >= 0) {
                 $apsMap["badge"] = $this->badge;
             }
             if($this -> sound == null || $this->sound == '' )
@@ -44,6 +55,11 @@ class IGtAPNPayload
             }elseif($this->sound != $this->APN_SOUND_SILENCE)
             {
                 $apsMap["sound"] = $this->sound;
+            }
+
+            //IOS 12 的 sound_d 覆盖旧 的sound
+            if (!empty($this->sound_d) && !empty($this->sound_d->get_asMap())){
+                $apsMap["sound"] = $this->sound_d->get_asMap();
             }
 
             if (sizeof($apsMap) == 0) {
@@ -62,10 +78,23 @@ class IGtAPNPayload
                     $map[$key] = $value;
                 }
             }
-            $map["aps"] = $apsMap;
 
+            if (!empty($this->threadId)){
+                $apsMap["thread-id"] = $this->threadId;
+            }
+
+            $map["aps"] = $apsMap;
+            if($this->apnsCollapseId != null){
+                $map["apns-collapse-id"] = $this->apnsCollapseId;
+            }
             if($this -> multiMedias != null && sizeof($this -> multiMedias) > 0) {
                 $map["_grinfo_"] = $this->check_multiMedias();
+            }
+            if ($this->voicePlayType == 1){
+                $map["_gvp_t_"] = 1;
+            }elseif($this->voicePlayType == 2 && !empty($this->voicePlayMessage)){
+                $map["_gvp_t_"] = 2;
+                $map["_gvp_m_"] = $this->voicePlayMessage;
             }
             return json_encode($map);
         } catch (Exception $e) {
@@ -122,6 +151,24 @@ class IGtAPNPayload
         $this->multiMedias = $medias;
         return $this;
     }
+
+    function set_threadId($threadId){
+        $this->threadId = $threadId;
+        return $this;
+    }
+
+    function set_sound_d($sound){
+        $this->sound_d = $sound;
+        return $this;
+    }
+
+    function get_apnsCollapseId(){
+        return $this->apnsCollapseId;
+    }
+
+    function set_apnsCollapseId($apnsCollapseId){
+        $this->apnsCollapseId = $apnsCollapseId;
+    }
 }
 interface ApnMsg
 {
@@ -138,6 +185,13 @@ class DictionaryAlertMsg implements ApnMsg{
     var $locKey;
     var $locArgs = array();
     var $launchImage;
+    var $subtitle;
+    var $subtitleLocKey;
+    var $subtitleLocArgs;
+    //IOS 12 新增
+    var $summaryArg;
+    //IOS 12 新增
+    var $summaryArgCount = -1;
 
     public function get_alertMsg() {
 
@@ -173,7 +227,32 @@ class DictionaryAlertMsg implements ApnMsg{
             return null;
         }
 
+        if ($this->subtitle != null && $this->subtitle != "") {
+            $alertMap["subtitle"] = $this->subtitle;
+        }
+        if (sizeof($this->subtitleLocArgs) > 0) {
+        $alertMap["subtitle-loc-args"] = $this->subtitleLocArgs;
+        }
+        if ($this->subtitleLocKey != null && $this->subtitleLocKey != "") {
+            $alertMap["subtitle-loc-key"] = $this->subtitleLocKey;
+        }
+        if (!empty($this->summaryArg)){
+            $alertMap["summary-arg"] = $this->summaryArg;
+        }
+        if ($this->summaryArgCount != -1){
+            $alertMap["summary-arg-count"] = $this->summaryArgCount;
+        }
         return $alertMap;
+    }
+
+    function set_summaryArg($summaryArg){
+        $this->summaryArg = $summaryArg;
+        return $this;
+    }
+
+    function set_summaryArgCount($summaryArgCount){
+        $this->summaryArgCount = $summaryArgCount;
+        return $this;
     }
 }
 
@@ -182,6 +261,47 @@ class SimpleAlertMsg implements ApnMsg{
 
     public function get_alertMsg() {
         return $this->alertMsg;
+    }
+}
+
+class Sound{
+    //取值范围0，1
+    var $critical = -1;
+    var $name;
+    //取值范围0-1，一位小数，超过一位四舍五入
+    var $volume = -1;
+
+    function set_critical($critical)
+    {
+        $this->critical = $critical;
+    }
+
+    function set_name($name)
+    {
+        $this->name = $name;
+    }
+
+    function set_volume($volume)
+    {
+        if ($volume > 1 || $volume < 0){
+            throw new Exception("volume of sound_d should between 0.0 and 1.0");
+        }
+        $this->volume = round($volume, 1);
+    }
+
+    function get_asMap()
+    {
+        $a = array();
+        if (!empty($this->name)){
+            $a["name"] = $this->name;
+        }
+        if ($this->critical != -1){
+            $a["critical"] = $this->critical;
+        }
+        if ($this->volume != -1){
+            $a["volume"] = $this->volume;
+        }
+        return $a;
     }
 }
 ?>

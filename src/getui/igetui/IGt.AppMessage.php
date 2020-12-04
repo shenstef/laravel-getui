@@ -1,20 +1,18 @@
 <?php
 header("Content-Type: text/html; charset=utf-8");
-require_once(dirname(__FILE__) . '/' . 'utils/AppConditions.php');
+require_once(dirname(__FILE__) .'/'.'utils/AppConditions.php');
 class IGtAppMessage extends IGtMessage{
 	
 	//array('','',..)
 	var $appIdList;
-	
 	//array('','',..)
 	var $phoneTypeList;
-	
 	//array('','',..)
 	var $provinceList;
-
     var $tagList;
 	var $conditions;
     var $speed=0;
+    var $pushTime;
 	function __construct(){
 		parent::__construct();
 	}
@@ -73,6 +71,24 @@ class IGtAppMessage extends IGtMessage{
 	{
 		return $this->conditions;
 	}
+
+    /**
+     * @return mixed
+     */
+    public function getPushTime()
+    {
+        return $this->pushTime;
+    }
+
+    /**
+     * @param mixed $pushTime
+     */
+    public function setPushTime($pushTime)
+    {
+
+        $this->pushTime = $pushTime;
+    }
+
 
 	public function set_conditions($conditions)
 	{

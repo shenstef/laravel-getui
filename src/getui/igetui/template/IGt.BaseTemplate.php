@@ -2,6 +2,8 @@
 
 require_once(dirname(__FILE__) . '/' . '../utils/ApnsUtils.php');
 require_once(dirname(__FILE__) . '/' . '../IGt.APNPayload.php');
+require_once(dirname(__FILE__) . '/' . './notify/SmsMessage.php');
+require_once(dirname(__FILE__) . '/' . './notify/SmsMessage.php');
 
 class IGtBaseTemplate
 {
@@ -9,6 +11,7 @@ class IGtBaseTemplate
     var $appkey;
     var $pushInfo;
     var $duration;
+    var $smsInfo;
 
     function get_transparent()
     {
@@ -21,6 +24,9 @@ class IGtBaseTemplate
         $transparent->set_pushInfo($this->get_pushInfo());
         $transparent->set_appId($this->appId);
         $transparent->set_appKey($this->appkey);
+        if($this->smsInfo != null){
+            $transparent->set_smsInfo($this->smsInfo);
+        }
 
         $actionChainList = $this->getActionChain();
 
@@ -100,6 +106,72 @@ class IGtBaseTemplate
         return $this->pushInfo;
     }
 
+    function setSmsInfo($smsMessage){
+
+        if($smsMessage == null){
+            throw new RuntimeException("smsInfo cannot be empty");
+        } else {
+            $smsTemplateId = $smsMessage->getSmsTemplateId();
+            $smsContent = $smsMessage->getSmsContent();
+            $offlineSendtime = $smsMessage->getOfflineSendtime();
+            $smsSendDuration = 0;
+            if ($smsTemplateId != null || !empty($smsTemplateId)) {
+                if ($offlineSendtime == null) {
+                    throw new RuntimeException("offlineSendtime cannot be empty");
+                } else {
+                    $build = new SmsInfo();
+                    $build->set_smsChecked(false);
+                    $build->set_smsTemplateId($smsTemplateId);
+                    $build->set_offlineSendtime($offlineSendtime);
+                    if ($smsMessage->getisApplink()) {
+
+                        if ($smsContent['url'] != null) {
+                            throw new RuntimeException("SmsContent cann not contains key about url");
+                        }
+                        $smsContentEntry = new SmsContentEntry();
+                        $smsContentEntry->set_key("applinkIdentification");
+                        $smsContentEntry->set_value("1");
+                        $build->set_smsContent("applinkIdentification",$smsContentEntry);
+                        $payload = $smsMessage->getPayload();
+
+                        if ($payload != null && !empty($payload)) {
+                            $smsContentEntry = new SmsContentEntry();
+                            $smsContentEntry->set_key("url");
+                            $smsContentEntry->set_value($smsMessage->getUrl() . "?n=" . $payload . "&p=");
+                            $build->set_smsContent("url",$smsContentEntry);
+                        } else {
+                            $smsContentEntry = new SmsContentEntry();
+                            $smsContentEntry->set_key("url");
+                            $smsContentEntry->set_value($smsMessage->getUrl() . "?p=");
+                            $build->set_smsContent("url",$smsContentEntry);
+                        }
+                    }
+                    if ($smsContent != null) {
+                        foreach ($smsContent as $key => $value) {
+                            if ($key == null || empty($key) || $value == null) {
+                                throw new RuntimeException("smsContent entry cannot be null");
+                            } else {
+                                $smsContentEntry = new SmsContentEntry();
+                                $smsContentEntry->set_key($key);
+                                $smsContentEntry->set_value($value);
+                                $build->set_smsContent($key,$smsContentEntry);
+                            }
+                        }
+                    }
+                    if ($smsSendDuration != null) {
+                        $build->smsSendDuration($smsSendDuration);
+                    }
+                    $this->smsInfo = $build;
+                }
+            }
+            else {
+                    throw new RuntimeException("smsTemplateId cannot be empty");
+                }
+
+            }
+
+
+    }
     function set_pushInfo($actionLocKey, $badge, $message, $sound, $payload, $locKey, $locArgs, $launchImage, $contentAvailable = 0)
     {
         $apn = new IGtAPNPayload();
@@ -204,8 +276,31 @@ class IGtBaseTemplate
         if($this instanceof IGtAPNTemplate) {
             return 5;
         }
+
+        if($this instanceof IGtStartActivityTemplate) {
+            return 7;
+        }
         return -1;
+    }
+    function setBlackThirdparty(...$thirdparry){
+        $numargs = count($thirdparry);
+        if ($numargs > 0){
+            $pushInfo = $this->get_pushInfo();
+            for ($i = 0; $i < $numargs; $i++) {
+                $pushInfo->set_blackThirdparty($i, $thirdparry[$i]);
+            }
+        }
     }
 
 
+}
+
+class Thirdparty
+{
+    const HW = 'HW';
+    const XM = 'XM';
+    const VV = 'VV';
+    const MZ = 'MZ';
+    const FCM = 'FCM';
+    const OP = 'OP';
 }

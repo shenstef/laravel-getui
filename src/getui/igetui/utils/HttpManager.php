@@ -47,8 +47,16 @@ class HttpManager
             curl_setopt($curl, CURLOPT_CONNECTTIMEOUT_MS, 30000);
             curl_setopt($curl, CURLOPT_NOSIGNAL, 1);
         }
-        //通过代理访问接口需要在此处配置代理
-        //curl_setopt($curl, CURLOPT_PROXY, '192.168.1.18:808');
+       // 通过代理访问接口需要在此处配置代理
+        curl_setopt ($curl, CURLOPT_PROXY, GTConfig::getHttpProxyIp());
+        curl_setopt($curl,CURLOPT_PROXYPORT,GTConfig::getHttpProxyPort());
+        curl_setopt($curl, CURLOPT_PROXYUSERNAME, GTConfig::getHttpProxyUserName());
+        curl_setopt($curl, CURLOPT_PROXYPASSWORD, GTConfig::getHttpProxyPasswd());
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1); // return don't print
+        curl_setopt($curl, CURLOPT_TIMEOUT, 30); //设置超时时间
+        curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)');
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1); // 302 redirect
+        curl_setopt($curl, CURLOPT_MAXREDIRS, 7); //HTTp定向级别
         //请求失败有3次重试机会
         $result = HttpManager::exeBySetTimes(3, $curl);
         //curl_close($curl);
@@ -75,11 +83,21 @@ class HttpManager
             curl_setopt($curl, CURLOPT_CONNECTTIMEOUT_MS, 30000);
             curl_setopt($curl, CURLOPT_NOSIGNAL, 1);
         }
+
         //通过代理访问接口需要在此处配置代理
+        curl_setopt ($curl, CURLOPT_PROXY, GTConfig::getHttpProxyIp());
+        curl_setopt($curl,CURLOPT_PROXYPORT,GTConfig::getHttpProxyPort());
+        curl_setopt($curl, CURLOPT_PROXYUSERNAME, GTConfig::getHttpProxyUserName());
+        curl_setopt($curl, CURLOPT_PROXYPASSWORD, GTConfig::getHttpProxyPasswd());
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1); // return don't print
+        curl_setopt($curl, CURLOPT_TIMEOUT, 30); //设置超时时间
+        curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)');
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1); // 302 redirect
+        curl_setopt($curl, CURLOPT_MAXREDIRS, 7); //HTTp定向级别
         //curl_setopt($curl, CURLOPT_PROXY, '192.168.1.18:808');
         //请求失败有3次重试机会
 		$result = HttpManager::exeBySetTimes(3, $curl);
-		
+
         curl_close($curl);
         return $result;
     }
@@ -98,6 +116,8 @@ class HttpManager
             //LogUtils::debug("发送请求 post:{$data} return:{$resp}");
             $result = json_decode($resp, true);
             return $result;
+        } catch (GtException $gte) {
+            throw new GtException($params["requestId"],"httpPost:[".$url."] [" .$data." ] [ ".$result."]:",$gte);
         } catch (Exception $e) {
             throw new RequestException($params["requestId"],"httpPost:[".$url."] [" .$data." ] [ ".$result."]:",$e);
         }
@@ -108,12 +128,16 @@ class HttpManager
         $result = curl_exec($curl);
 		$info = curl_getinfo($curl);
 		$code = $info["http_code"];
-		
+
         if (curl_errno($curl) != 0 && $code != 200) {
             LogUtils::debug("request errno: ".curl_errno($curl).",url:".$info["url"]);
 			$count--;
             if ($count > 0) {
                 $result = HttpManager::exeBySetTimes($count, $curl);
+            } else {
+                if ($code == 0 || $code == 404 || $code == 504){
+                    throw new GtException("connect failed, code = ".strval($code));
+                }
             }
         }
         return $result;
