@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 
 
 require_once dirname(__FILE__) . '/getui/IGt.Push.php';
+require_once dirname(__FILE__) . '/getui/igetui/template/notify/IGt.Notify.php';
 
 class GeTuiService implements PushInterface
 {
@@ -388,26 +389,34 @@ class GeTuiService implements PushInterface
         $template->set_transmissionContent($transContent);//透传内容
         //$template->set_duration(BEGINTIME,ENDTIME); //设置ANDROID客户端在此时间区间内展示消息
 
-        //APN高级推送
-        $apn = new \IGtAPNPayload();
-        $alertmsg = new \DictionaryAlertMsg();
-        $alertmsg->body = $content;
-        $alertmsg->actionLocKey = "ActionLockey";
-        $alertmsg->locKey = "LocKey";
-        $alertmsg->locArgs = array("locargs");
-        $alertmsg->launchImage = "launchimage";
-//        IOS8.2 支持
-        $alertmsg->title = $title;
-        $alertmsg->titleLocKey = "TitleLocKey";
-        $alertmsg->titleLocArgs = array("TitleLocArg");
+        $intent = 'intent:#Intent;action=android.intent.action.oppopush;launchFlags=0x14000000;component=com.laowubang.dgbao/io.dcloud.PandoraEntry;S.UP-OL-SU=true;S.title='.$title.';S.content='.$content.';S.payload=test;end';
+        $notify = new \IGtNotify();
+        $notify->set_title($title);
+        $notify->set_content($content);
+        $notify->set_intent($intent);
+        $notify->set_type('NotifyInfo_type._intent');
 
-        $apn->alertMsg = $alertmsg;
-        $apn->badge = 1;
-        $apn->sound = "";
-        $apn->add_customMsg("payload", $transContent);
-        $apn->contentAvailable = 1;
-        $apn->category = "ACTIONABLE";
-        $template->set_apnInfo($apn);
+        $template->set3rdNotifyInfo($notify);
+        //APN高级推送
+//        $apn = new \IGtAPNPayload();
+//        $alertmsg = new \DictionaryAlertMsg();
+//        $alertmsg->body = $content;
+//        $alertmsg->actionLocKey = "ActionLockey";
+//        $alertmsg->locKey = "LocKey";
+//        $alertmsg->locArgs = array("locargs");
+//        $alertmsg->launchImage = "launchimage";
+////        IOS8.2 支持
+//        $alertmsg->title = $title;
+//        $alertmsg->titleLocKey = "TitleLocKey";
+//        $alertmsg->titleLocArgs = array("TitleLocArg");
+//
+//        $apn->alertMsg = $alertmsg;
+//        $apn->badge = 1;
+//        $apn->sound = "";
+//        $apn->add_customMsg("payload", $transContent);
+//        $apn->contentAvailable = 1;
+//        $apn->category = "ACTIONABLE";
+//        $template->set_apnInfo($apn);
         return $template;
     }
 
